@@ -51,9 +51,29 @@ DB 포트는 호스트에 공개하지 않으며 Compose 내부 주소는 `maria
 필요하면 최초 실행 전에 `.env`에 `MARIADB_ROOT_PASSWORD=원하는암호`를 지정할 수 있습니다.
 이미 초기화된 볼륨의 암호는 환경변수 변경만으로 바뀌지 않습니다.
 
-직접 의존성은 scheduler의 `node-cron`, web의 `next`, `react`, `react-dom`뿐입니다.
+런타임 직접 의존성은 scheduler의 `node-cron`, web의 `next`, `react`, `react-dom`입니다.
+TypeScript와 타입 선언 패키지, Tailwind CSS 및 PostCSS 관련 패키지는 개발 의존성입니다.
 각 package-lock.json과 `npm ci`로 의존성을 고정합니다.
 API, ORM, 업무 기능, 테스트 코드, 배포 및 CI/CD 구성은 포함하지 않습니다.
+
+## TypeScript 및 Tailwind CSS
+
+애플리케이션 소스는 `.ts`와 `.tsx`를 사용합니다. 스케줄러는 Node.js 24의
+내장 TypeScript 지원으로 `index.ts`를 직접 실행합니다. 실행 시 타입 검사는
+하지 않으며, enum 등 JavaScript 코드 생성이 필요한 문법은 사용하지 않습니다.
+Next.js는 TypeScript를 자체 처리합니다.
+
+Tailwind CSS는 `postcss.config.json`의 `@tailwindcss/postcss` 플러그인과
+`app/globals.css`의 import로 연결됩니다. 루트 body에 `min-h-screen`을 적용했고
+페이지는 기존처럼 빈 화면입니다. 별도의 Tailwind CLI 실행은 필요 없습니다.
+
+타입 검사는 각 앱에서 `npm run typecheck`로 수행할 수 있습니다.
+호스트에서 검사하려면 해당 앱의 `npm ci`가 필요하지만, Compose 실행에는 필요 없습니다.
+
+전환 후 두 앱의 타입 검사, 스케줄러 TS 실행 및 작업 등록, Next.js HTTP 200,
+Tailwind CSS 생성 및 HTTP 200 응답을 확인했습니다.
+사용자가 주석 처리한 `console.log('수신중')`은 보존했습니다.
+현재 로그 출력을 다시 켜려면 `scheduler/index.ts`에서 해당 주석을 해제합니다.
 
 ## 이번 작업의 검증 결과
 
