@@ -9,9 +9,31 @@ docker compose up --build
 ```
 
 Next.js 준비 로그가 나오면 http://localhost:3000 에 접근합니다.
-이번 단계는 UI 구현 범위가 아니므로 정상 페이지도 빈 화면입니다 (HTTP 200).
+현재 페이지에는 `Hello, World!`가 표시됩니다 (HTTP 200).
 Compose가 Next.js 개발 서버를 자동 실행하므로 별도의 `npm run dev`는 필요 없습니다.
-소스는 이미지에 복사됩니다. 소스 수정 후 위 명령을 다시 실행해 반영합니다.
+`web/app`은 컨테이너의 `/app/app`에 bind mount되어 저장한 변경이 즉시 전달됩니다.
+Compose에서는 Webpack 개발 모드와 1초 간격의 Watchpack 폴링을 사용하여
+Windows Docker Desktop에서도 변경을 감지하고 Fast Refresh로 브라우저를 갱신합니다.
+`page.tsx`, `layout.tsx`, `globals.css` 및 `app` 아래 새 파일은 재빌드 없이 반영됩니다.
+호스트의 `node_modules`와 `.next`는 마운트하지 않아 컨테이너 파일과 분리됩니다.
+패키지, Dockerfile, `app` 밖의 설정 또는 스케줄러 변경은 `docker compose up --build`로 반영합니다.
+
+기존 실행 환경에는 이번 Compose 설정을 한 번 적용해야 합니다:
+
+```sh
+docker compose up --build
+```
+
+그 후 http://127.0.0.1:3000/ 에서 `web/app/page.tsx`를 수정·저장하여 확인합니다.
+이전 구성은 빌드 시 소스만 복사했으므로 개발 서버가 실행 중이어도 호스트의 변경을 볼 수 없었습니다.
+
+Next.js의 개발용 Origin 검사에서 HMR WebSocket이 차단되지 않도록
+`next.config.ts`에 `allowedDevOrigins: ['127.0.0.1']`을 지정합니다.
+`localhost`는 Next.js가 기본 허용합니다. 이 설정이 없으면 `127.0.0.1`에서
+페이지 요청은 성공해도 HMR 연결이 거부되어 수동 새로고침이 필요할 수 있습니다.
+설정은 이미지에 복사되므로 변경 후 한 번 재빌드해야 합니다.
+Fast Refresh 확인은 페이지를 열어둔 채 텍스트를 저장하고, 새로고침 없이 화면이
+바뀌는지 확인해야 합니다. HTTP 재요청만으로는 자동 갱신을 검증할 수 없습니다.
 
 ## 스케줄링 선택
 
@@ -65,7 +87,7 @@ Next.js는 TypeScript를 자체 처리합니다.
 
 Tailwind CSS는 `postcss.config.json`의 `@tailwindcss/postcss` 플러그인과
 `app/globals.css`의 import로 연결됩니다. 루트 body에 `min-h-screen`을 적용했고
-페이지는 기존처럼 빈 화면입니다. 별도의 Tailwind CLI 실행은 필요 없습니다.
+별도의 Tailwind CLI 실행은 필요 없습니다.
 
 타입 검사는 각 앱에서 `npm run typecheck`로 수행할 수 있습니다.
 호스트에서 검사하려면 해당 앱의 `npm ci`가 필요하지만, Compose 실행에는 필요 없습니다.

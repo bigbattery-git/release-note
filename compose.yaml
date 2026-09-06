@@ -6,10 +6,14 @@ services:
   web:
     build: ./web
     init: true
+    command: ["npm", "run", "dev", "--", "--webpack"]
+    volumes:
+      - ./web/app:/app/app
     ports:
       - "127.0.0.1:3000:3000"
     environment:
       NEXT_TELEMETRY_DISABLED: "1"
+      WATCHPACK_POLLING: "1000"
 
   mariadb:
     image: mariadb:11.8
