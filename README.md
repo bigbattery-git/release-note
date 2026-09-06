@@ -67,11 +67,63 @@ docker compose down
 스케줄러 로그의 `수신중` 출력 간격은 약 1초입니다.
 MariaDB 데이터는 named volume에 유지됩니다. 애플리케이션 DB·테이블·초기화 SQL은
 만들지 않습니다. MariaDB 자체 구동에 필요한 시스템 DB는 공식 이미지가 초기화합니다.
-DB 포트는 호스트에 공개하지 않으며 Compose 내부 주소는 `mariadb:3306`입니다.
+Compose 내부 주소는 `mariadb:3306`입니다. 같은 PC의 HeidiSQL에서는
+호스트에 연결한 `127.0.0.1:3306`을 사용합니다.
 
 기본 root 암호 `local-development-only`는 이 로컬 개발 환경 전용입니다.
 필요하면 최초 실행 전에 `.env`에 `MARIADB_ROOT_PASSWORD=원하는암호`를 지정할 수 있습니다.
 이미 초기화된 볼륨의 암호는 환경변수 변경만으로 바뀌지 않습니다.
+
+## HeidiSQL에서 MariaDB 접속
+
+`mariadb`는 Compose 네트워크 안에서 사용하는 서비스 이름입니다.
+Docker Desktop을 실행하는 Windows PC의 HeidiSQL에서는 `127.0.0.1`로 접속합니다.
+`compose.yaml`의 MariaDB 포트 설정은 다음과 같습니다:
+
+```yaml
+ports:
+  - "127.0.0.1:3306:3306"
+```
+
+앞의 `3306`은 PC의 포트, 뒤의 `3306`은 컨테이너의 MariaDB 포트입니다.
+`127.0.0.1`에 바인딩하므로 같은 PC에서 접속하도록 설정됩니다.
+
+프로젝트 루트에서 아래 명령으로 포트 설정을 적용합니다.
+기존 컨테이너가 있다면 재생성되며, DB 데이터는 기존 named volume에 유지됩니다.
+
+```sh
+docker compose up -d mariadb
+docker compose ps mariadb
+docker compose port mariadb 3306
+```
+
+MariaDB가 `(healthy)` 상태이고 포트 조회 결과가 `127.0.0.1:3306`이면,
+HeidiSQL을 실행하고 **신규(New)** 세션에 다음 값을 입력한 뒤 **열기(Open)**를 누릅니다.
+
+| 항목 | 값 |
+| --- | --- |
+| 네트워크 유형 | MariaDB or MySQL (TCP/IP) |
+| 호스트명 / IP | `127.0.0.1` |
+| 사용자 | `root` |
+| 암호 | 기본값 `local-development-only` 또는 DB 최초 초기화 시 지정한 암호 |
+| 포트 | `3306` |
+| 데이터베이스 | 비워 둠 (접속 후 선택) |
+
+아직 애플리케이션 DB와 테이블을 생성하지 않았으므로 시스템 DB만 보이는 것은 정상입니다.
+
+- PC의 `3306` 포트를 다른 MySQL/MariaDB가 사용 중이면 포트 설정을
+  `"127.0.0.1:3307:3306"`으로 바꾸고 `docker compose up -d mariadb`를 다시 실행합니다.
+  이때 HeidiSQL 포트도 `3307`로 바꿉니다. Compose 내부 주소는 계속 `mariadb:3306`입니다.
+- 연결이 거부되면 Docker Desktop 실행 여부와 `docker compose ps mariadb`,
+  `docker compose logs --tail=30 mariadb`로 기동 상태 및 포트 설정을 확인합니다.
+- `Access denied`가 나오면 DB 최초 초기화 시 사용한 암호를 확인합니다.
+  `.env` 변경만으로 기존 DB 암호가 바뀌지는 않습니다. 암호 문제 해결을 위해
+  볼륨을 삭제하면 데이터도 지워지므로 기존 볼륨을 유지합니다.
+
+참고: [Docker 포트 공개](https://docs.docker.com/get-started/docker-concepts/running-containers/publishing-ports/),
+[HeidiSQL 연결 도움말](https://www.heidisql.com/help.php).
+
+## 의존성 및 범위
 
 런타임 직접 의존성은 scheduler의 `node-cron`, web의 `next`, `react`, `react-dom`입니다.
 TypeScript와 타입 선언 패키지, Tailwind CSS 및 PostCSS 관련 패키지는 개발 의존성입니다.
