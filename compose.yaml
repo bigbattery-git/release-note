@@ -14,6 +14,14 @@ services:
     environment:
       NEXT_TELEMETRY_DISABLED: "1"
       WATCHPACK_POLLING: "1000"
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-local-development-only}
+      SESSION_PASSWORD: ${SESSION_PASSWORD:-}
+    depends_on:
+      mariadb:
+        condition: service_healthy
 
   mariadb:
     image: mariadb:11.8

@@ -2,17 +2,28 @@
   "name": "news-web",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
+    "db:check": "node --env-file-if-exists=.env scripts/check-database.ts",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@tanstack/react-query": "5.102.8",
+    "bcrypt": "6.0.0",
+    "iron-session": "9.0.1",
+    "kysely": "0.29.5",
+    "mysql2": "3.24.4",
     "next": "16.3.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "react-hook-form": "7.87.0",
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
+    "@tanstack/react-query-devtools": "5.102.8",
+    "@types/bcrypt": "6.0.0",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",

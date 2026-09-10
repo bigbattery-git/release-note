@@ -125,10 +125,57 @@ HeidiSQL을 실행하고 **신규(New)** 세션에 다음 값을 입력한 뒤 *
 
 ## 의존성 및 범위
 
-런타임 직접 의존성은 scheduler의 `node-cron`, web의 `next`, `react`, `react-dom`입니다.
-TypeScript와 타입 선언 패키지, Tailwind CSS 및 PostCSS 관련 패키지는 개발 의존성입니다.
+런타임 직접 의존성은 scheduler의 `node-cron`과 web의 Next.js, React, MariaDB 접근,
+client-side server state, session, password hashing, validation 및 Form 관련 package입니다.
+TypeScript와 타입 선언 패키지, Tailwind CSS, PostCSS 및 TanStack Query Devtools 관련 package는 개발 의존성입니다.
 각 package-lock.json과 `npm ci`로 의존성을 고정합니다.
-API, ORM, 업무 기능, 테스트 코드, 배포 및 CI/CD 구성은 포함하지 않습니다.
+이번 초기 설정에는 DB schema, migration, 회원가입·로그인, 실제 Release 수집 기능,
+Zod schema와 React Hook Form component는 포함하지 않습니다.
+
+## 애플리케이션 기반 라이브러리
+
+- `kysely`, `mysql2`: MariaDB connection pool과 type-safe query builder
+- `@tanstack/react-query`: browser server state provider
+- `@tanstack/react-query-devtools`: 개발 환경 query debugging
+- `iron-session`: 암호화 cookie session 설정
+- `bcrypt`: server-side password hash와 검증
+- `zod`, `react-hook-form`: 후속 validation과 Form 구현을 위한 package 설치
+
+로컬에서 web을 직접 실행할 때는 `web/.env.example`을 참고해 `web/.env`에
+`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`와 `SESSION_PASSWORD`를 설정합니다.
+Docker Compose를 사용할 때는 저장소 루트의 `.env.example`을 `.env`로 복사하고 값을
+설정합니다. `SESSION_PASSWORD`에는 32자 이상의 무작위 문자열을 사용하며,
+Compose 내부에서는 `DB_HOST=mariadb`가 자동 적용됩니다.
+
+MariaDB에 연결한 뒤 schema를 변경하지 않는 `SELECT 1` 검증은 다음 명령으로 실행합니다.
+
+```sh
+npm run db:check --prefix web
+```
+
+## GitHub Release 문서 MCP
+
+`mcp/`는 `docs/technology_update_api_research.md`를 read-only resource와 tool로 제공하는
+로컬 stdio MCP server입니다. source Markdown을 실행 시 직접 읽으므로 별도 문서 사본을
+동기화할 필요가 없습니다.
+
+```sh
+npm ci --prefix mcp
+npm run build --prefix mcp
+npm run verify --prefix mcp
+```
+
+MCP client에는 build 후 다음 명령과 인자를 stdio server로 등록합니다. client의 현재
+working directory에 의존하지 않도록 실제 저장소 절대 경로를 사용합니다.
+
+```text
+command: node
+args: C:\Users\dbdnj\Desktop\news-summery\mcp\dist\index.js
+```
+
+coding client는 GitHub Release 수집 기능을 구현하거나 수정하기 전에
+`news-summary://docs/github-release-implementation-guide` resource 또는
+`read_github_release_implementation_guide` tool로 기준 문서를 읽어야 합니다.
 
 ## TypeScript 및 Tailwind CSS
 
