@@ -33,14 +33,15 @@ GitHub Repository의 Release를 주기적으로 수집하고 OpenAI API로 정�
 
 ### Skills
 
-반복되는 요청별 판단 절차를 네 개의 skill로 분리했다.
+반복되는 요청별 판단 절차를 다섯 개의 skill로 분리했다.
 
 | Skill | 역할 | 변경 제한 |
 | --- | --- | --- |
 | `repository-checks` | 변경 영역에 맞는 기존 검증 명령 선택 | 존재하지 않는 검증을 성공으로 기록하지 않음 |
 | `deploy-readiness` | lint, typecheck, test, build를 이용해 배포 준비 상태 판정 | 자동 수정, 설치, migration, 실제 배포 금지 |
 | `acceptance-criteria` | 테스트·검수 요청에서 관찰 가능한 acceptance 조건 제시 | 테스트 구현과 코드 변경 금지 |
-| `conversation-work-log` | 현재 대화에서 수행한 작업을 Work Log로 작성 | Work Log 외의 코드와 설정 변경 금지 |
+| `task-spec-authoring` | 대략적인 요청을 구현 가능한 Task Spec으로 정리 | 문서 작성 후 구현을 자동으로 시작하지 않음 |
+| `conversation-work-log` | 현재 대화의 Work Log 작성과 기존 로그의 이력 기반 보완 | Work Log 외의 코드와 설정 변경 금지 |
 
 ### Subagents
 
@@ -112,7 +113,8 @@ Hooks는 script를 직접 실행해 검증했지만 실제 harness runner에 자
 - `.agents/skills/repository-checks/SKILL.md`: 저장소 검증 절차
 - `.agents/skills/deploy-readiness/SKILL.md`: 배포 준비 상태 진단 절차
 - `.agents/skills/acceptance-criteria/SKILL.md`: acceptance 조건 작성 절차
-- `.agents/skills/conversation-work-log/SKILL.md`: 대화 기반 Work Log 작성 절차
+- `.agents/skills/task-spec-authoring/SKILL.md`: 대략적인 요청을 구현 전 Task Spec으로 정리하는 절차
+- `.agents/skills/conversation-work-log/SKILL.md`: 대화 기반 Work Log 작성과 기존 로그의 변경 이력 관리 절차
 - `.agents/subagents/architecture-advisor.md`: 아키텍처 분석 역할
 - `.agents/subagents/backend-engineer.md`: backend 구현 역할
 - `.agents/subagents/database-engineer.md`: MariaDB 구현 역할
@@ -123,3 +125,10 @@ Hooks는 script를 직접 실행해 검증했지만 실제 harness runner에 자
 ## 7. 참고 자료
 
 - `docs/rules/work_log.md`
+
+## 변경 이력
+
+### 2026-09-10 - Task Spec 작성과 Work Log 수정 절차 추가
+
+- 이전: 네 개의 skill이 있었고 `conversation-work-log`는 현재 대화의 Work Log를 새로 작성하거나 보완하는 기본 절차만 정의했다.
+- 변경 내역: 대략적인 요청을 Goal, Requirements, Acceptance Criteria, Out of Scope 등으로 정리하는 `task-spec-authoring`을 추가했다. `conversation-work-log`에는 기존 Work Log 수정 시 문서 맨 아래에 `이전`과 `변경 내역`을 누적하는 규칙을 추가했다.
