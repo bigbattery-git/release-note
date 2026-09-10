@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
     "db:check": "node --env-file-if-exists=.env scripts/check-database.ts",
+    "db:migrate": "node --env-file-if-exists=.env scripts/migrate-database.ts",
+    "start:docker": "npm run db:migrate && npm run dev -- --webpack",
+    "test": "node --test lib/releases/*.test.ts",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {

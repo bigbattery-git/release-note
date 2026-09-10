@@ -65,8 +65,8 @@ docker compose down
 
 `scheduler`, `web`은 실행 상태, `mariadb`는 `(healthy)` 상태인지 확인합니다.
 스케줄러 로그의 `수신중` 출력 간격은 약 1초입니다.
-MariaDB 데이터는 named volume에 유지됩니다. 애플리케이션 DB·테이블·초기화 SQL은
-만들지 않습니다. MariaDB 자체 구동에 필요한 시스템 DB는 공식 이미지가 초기화합니다.
+MariaDB 데이터는 named volume에 유지됩니다. `web` service는 시작 전에 versioned SQL
+migration을 실행해 기본 `release` DB와 `technology_releases` table을 준비합니다.
 Compose 내부 주소는 `mariadb:3306`입니다. 같은 PC의 HeidiSQL에서는
 호스트에 연결한 `127.0.0.1:3306`을 사용합니다.
 
@@ -107,9 +107,9 @@ HeidiSQL을 실행하고 **신규(New)** 세션에 다음 값을 입력한 뒤 *
 | 사용자 | `root` |
 | 암호 | 기본값 `local-development-only` 또는 DB 최초 초기화 시 지정한 암호 |
 | 포트 | `3306` |
-| 데이터베이스 | 비워 둠 (접속 후 선택) |
+| 데이터베이스 | `release` |
 
-아직 애플리케이션 DB와 테이블을 생성하지 않았으므로 시스템 DB만 보이는 것은 정상입니다.
+최초 `web` 기동 후 `release` DB에서 `technology_releases` table을 확인할 수 있습니다.
 
 - PC의 `3306` 포트를 다른 MySQL/MariaDB가 사용 중이면 포트 설정을
   `"127.0.0.1:3307:3306"`으로 바꾸고 `docker compose up -d mariadb`를 다시 실행합니다.
@@ -129,8 +129,8 @@ HeidiSQL을 실행하고 **신규(New)** 세션에 다음 값을 입력한 뒤 *
 client-side server state, session, password hashing, validation 및 Form 관련 package입니다.
 TypeScript와 타입 선언 패키지, Tailwind CSS, PostCSS 및 TanStack Query Devtools 관련 package는 개발 의존성입니다.
 각 package-lock.json과 `npm ci`로 의존성을 고정합니다.
-이번 초기 설정에는 DB schema, migration, 회원가입·로그인, 실제 Release 수집 기능,
-Zod schema와 React Hook Form component는 포함하지 않습니다.
+현재 회원가입·로그인, OpenAI 요약, 자동 Release 수집 scheduler,
+React Hook Form component는 포함하지 않습니다.
 
 ## 애플리케이션 기반 라이브러리
 
@@ -142,7 +142,7 @@ Zod schema와 React Hook Form component는 포함하지 않습니다.
 - `zod`, `react-hook-form`: 후속 validation과 Form 구현을 위한 package 설치
 
 로컬에서 web을 직접 실행할 때는 `web/.env.example`을 참고해 `web/.env`에
-`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`와 `SESSION_PASSWORD`를 설정합니다.
+`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`과 `SESSION_PASSWORD`를 설정합니다.
 Docker Compose를 사용할 때는 저장소 루트의 `.env.example`을 `.env`로 복사하고 값을
 설정합니다. `SESSION_PASSWORD`에는 32자 이상의 무작위 문자열을 사용하며,
 Compose 내부에서는 `DB_HOST=mariadb`가 자동 적용됩니다.
@@ -152,6 +152,27 @@ MariaDB에 연결한 뒤 schema를 변경하지 않는 `SELECT 1` 검증은 다�
 ```sh
 npm run db:check --prefix web
 ```
+
+## 최신 Release 수동 저장
+
+웹의 `최신 Release 저장 테스트` 버튼은 Next.js, Node.js, React의 공식 GitHub Releases
+REST API를 순서대로 조회해 최신 안정 Release를 MariaDB에 저장합니다. MariaDB 자체의
+Release는 수집 대상이 아닙니다. 같은 Release를 다시 조회하면 중복 행을 만들지 않고,
+외부 정보가 변경된 경우 기존 행을 갱신합니다.
+
+수집 대상의 code, 표시명, GitHub Releases path와 활성 상태는 `default_technologies`에서
+관리합니다. `technology_releases.technology`는 `VARCHAR(50)`이며 이 catalog table을
+foreign key로 참조합니다.
+
+Docker에서는 `web` 시작 전에 migration이 자동 실행됩니다. 호스트에서 직접 실행할 때는
+DB 환경 변수를 설정한 뒤 다음 명령을 한 번 실행합니다.
+
+```sh
+npm run db:migrate --prefix web
+```
+
+공개 Repository 수동 조회에는 `GITHUB_TOKEN`이 선택 사항입니다. 향후 1분 주기 수집에서는
+비인증 rate limit을 피하기 위해 최소 권한 token 사용을 권장합니다.
 
 ## GitHub Release 문서 MCP
 

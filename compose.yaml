@@ -6,7 +6,7 @@ services:
   web:
     build: ./web
     init: true
-    command: ["npm", "run", "dev", "--", "--webpack"]
+    command: ["npm", "run", "start:docker"]
     volumes:
       - ./web/app:/app/app
     ports:
@@ -18,7 +18,12 @@ services:
       DB_PORT: "3306"
       DB_USER: root
       DB_PASSWORD: ${MARIADB_ROOT_PASSWORD:-local-development-only}
+      DB_NAME: ${MARIADB_DATABASE:-release}
       SESSION_PASSWORD: ${SESSION_PASSWORD:-}
+      GITHUB_API_BASE_URL: ${GITHUB_API_BASE_URL:-https://api.github.com}
+      GITHUB_API_VERSION: ${GITHUB_API_VERSION:-2026-03-10}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_USER_AGENT: ${GITHUB_USER_AGENT:-news-summery/1.0}
     depends_on:
       mariadb:
         condition: service_healthy
@@ -29,6 +34,7 @@ services:
       - "127.0.0.1:3306:3306"
     environment:
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-local-development-only}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-release}
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:

@@ -1,4 +1,4 @@
-import { checkDatabaseConnection, database } from "../lib/database.ts";
+import { checkDatabaseConnection, getDatabase } from "../lib/database.ts";
 
 try {
   const connected = await checkDatabaseConnection();
@@ -9,5 +9,5 @@ try {
 
   console.log("MariaDB 연결 확인 완료");
 } finally {
-  await database.destroy();
+  await getDatabase().destroy();
 }
