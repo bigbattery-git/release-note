@@ -26,7 +26,7 @@
 - 최초 schema의 `technology ENUM(...)`을 `VARCHAR(50)`으로 변경했다.
 - `default_technologies`를 추가해 technology code, 표시명, GitHub Releases path, 활성 여부와 정렬 순서를 관리한다.
 - `technology_releases.technology`가 `default_technologies.technology`를 참조하도록 foreign key를 추가했다.
-- SQL 파일을 이름순으로 한 번씩 적용하는 `app_migrations` 이력 관리를 추가했다.
+- 현재는 TypeScript migration을 이름순으로 적용하며 `kysely_migration` 이력을 관리한다.
 
 ### 2.2 GitHub Release 수집
 
@@ -90,8 +90,8 @@ DB catalog 조회는 외부 호출보다 먼저 일어나지만, Release 쓰기 
 | `web/lib/releases/service.ts` | catalog 조회, 전체 작업 순서, transaction 저장 | 부분 실패 정책과 처리 건수 |
 | `web/lib/releases/release-comparison.ts` | 기존 행과 새 Release의 변경 여부 비교 | 어떤 필드 변경을 update로 볼지 |
 | `web/lib/database.ts` | Kysely DB 타입과 lazy connection pool | build 시점 환경변수 접근, pool lifecycle |
-| `web/migrations/*.sql` | DB schema의 순차 변경 | 기존 데이터, FK, index, 재적용 여부 |
-| `web/scripts/migrate-database.ts` | DB 생성, migration 탐색과 적용 이력 | 실패한 DDL과 migration 기록의 일관성 |
+| `web/migrations/*.ts` | Kysely 기반 DB schema의 순차 변경 | 기존 데이터, FK, index, 재적용 여부 |
+| `web/kysely.config.ts` | 공식 CLI의 MariaDB 연결, migration provider와 기존 이력 호환 | 환경변수, migration folder와 이력 이름 |
 | `compose.yaml`, `web/Dockerfile` | container 환경변수, migration과 source 포함 | bind mount 범위와 image rebuild |
 
 ## 5. 우선순위별로 공부할 것
@@ -156,7 +156,10 @@ technology를 더 이상 지원하지 않을 때는 parent 행을 삭제하기�
 ### 5순위: migration과 schema 변경
 
 운영 DB schema는 HeidiSQL에서 직접 바꾼 뒤 끝내지 않고 새 번호의 migration으로 남겨야 한다.
-현재 runner는 `web/migrations`의 SQL 파일을 이름순으로 읽고 `app_migrations`에 적용 이력을 기록한다.
+현재 `kysely-ctl`은 `web/migrations`의 TypeScript migration을 이름순으로 읽고 Kysely의
+`kysely_migration` table에 적용 이력을 기록한다. 기존 `app_migrations` 기록이 있으면
+timestamp 파일명 기준의 표준 이력으로 자동 이관한다. 새 migration은 `web`에서
+`npx kysely migrate make <name>`으로 생성한다.
 
 공부할 질문:
 
@@ -166,8 +169,8 @@ technology를 더 이상 지원하지 않을 때는 parent 행을 삭제하기�
 
 ### 6순위: Kysely와 transaction
 
-- Kysely의 DB interface는 실제 table을 생성하지 않고 TypeScript query 타입만 설명한다.
-- 실제 table은 migration SQL이 만든다.
+- Kysely의 애플리케이션 DB interface는 query의 TypeScript 타입을 설명한다.
+- 실제 table은 Kysely migration의 `up` 함수와 schema builder가 만든다.
 - transaction callback 안에서 오류가 발생하면 해당 쓰기 작업을 rollback한다.
 - 현재 구조는 외부 API 호출을 transaction 밖에서 수행해 DB lock 시간을 줄인다.
 

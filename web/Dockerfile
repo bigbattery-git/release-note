@@ -6,6 +6,6 @@ COPY app ./app
 COPY lib ./lib
 COPY migrations ./migrations
 COPY scripts ./scripts
-COPY tsconfig.json postcss.config.json next.config.ts ./
+COPY tsconfig.json postcss.config.json next.config.ts kysely.config.ts ./
 EXPOSE 3000
 CMD ["npm", "run", "dev"]

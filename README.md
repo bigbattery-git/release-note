@@ -65,8 +65,8 @@ docker compose down
 
 `scheduler`, `web`은 실행 상태, `mariadb`는 `(healthy)` 상태인지 확인합니다.
 스케줄러 로그의 `수신중` 출력 간격은 약 1초입니다.
-MariaDB 데이터는 named volume에 유지됩니다. `web` service는 시작 전에 versioned SQL
-migration을 실행해 기본 `release` DB와 `technology_releases` table을 준비합니다.
+MariaDB 데이터는 named volume에 유지됩니다. `mariadb` service가 기본 `release` DB를
+생성하고, `web` service는 시작 전에 Kysely migration을 실행해 table을 준비합니다.
 Compose 내부 주소는 `mariadb:3306`입니다. 같은 PC의 HeidiSQL에서는
 호스트에 연결한 `127.0.0.1:3306`을 사용합니다.
 
@@ -135,6 +135,7 @@ React Hook Form component는 포함하지 않습니다.
 ## 애플리케이션 기반 라이브러리
 
 - `kysely`, `mysql2`: MariaDB connection pool과 type-safe query builder
+- `kysely-ctl`: Kysely 공식 migration CLI
 - `@tanstack/react-query`: browser server state provider
 - `@tanstack/react-query-devtools`: 개발 환경 query debugging
 - `iron-session`: 암호화 cookie session 설정
@@ -170,6 +171,17 @@ DB 환경 변수를 설정한 뒤 다음 명령을 한 번 실행합니다.
 ```sh
 npm run db:migrate --prefix web
 ```
+
+또는 `web` 디렉터리에서 공식 CLI를 직접 실행할 수 있습니다.
+
+```sh
+cd web
+npx kysely migrate latest
+```
+
+Migration은 `web/migrations/*.ts`의 `up`/`down` 함수로 관리하며, 적용 이력은 Kysely의
+`kysely_migration` table에 기록됩니다. 기존 `app_migrations` 이력은 CLI config가
+timestamp 기반 Kysely 이력에 반영하므로 적용이 끝난 migration을 다시 실행하지 않습니다.
 
 공개 Repository 수동 조회에는 `GITHUB_TOKEN`이 선택 사항입니다. 향후 1분 주기 수집에서는
 비인증 rate limit을 피하기 위해 최소 권한 token 사용을 권장합니다.
