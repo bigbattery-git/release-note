@@ -18,6 +18,8 @@ services:
     command: ["npm", "run", "start:docker"]
     volumes:
       - ./web/app:/app/app
+      - ./web/components:/app/components
+      - ./web/lib:/app/lib
     ports:
       - "127.0.0.1:3000:3000"
     environment:
