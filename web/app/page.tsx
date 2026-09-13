@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getLatestTechnologyReleases } from "../lib/releases/history.ts";
-import { ReleaseTestPanel } from "./release-test-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +9,6 @@ export default async function Home() {
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-14">
       <div className="mx-auto w-full max-w-5xl space-y-8">
-        <ReleaseTestPanel />
-
         <section aria-labelledby="latest-release-heading">
           <div className="mb-5">
             <p className="text-sm font-semibold tracking-wide text-blue-600">

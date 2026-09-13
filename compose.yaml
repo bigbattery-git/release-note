@@ -2,6 +2,12 @@ services:
   scheduler:
     build: ./scheduler
     init: true
+    environment:
+      RELEASE_COLLECTION_URL: ${RELEASE_COLLECTION_URL:-http://web:3000/api/releases/collect}
+      SCHEDULER_REQUEST_TIMEOUT_MS: ${SCHEDULER_REQUEST_TIMEOUT_MS:-300000}
+    depends_on:
+      web:
+        condition: service_started
 
   web:
     build: ./web
