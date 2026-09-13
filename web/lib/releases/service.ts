@@ -12,6 +12,15 @@ import type {
 } from "./types";
 import { hasReleaseChanged } from "./release-comparison.ts";
 
+/**
+ * 최신 릴리즈 저장을 시도한다.
+ * 릴리즈가 없으면, 최신 릴리즈를 저장하고 종료
+ * 릴리즈가 있으면, api로 받아온 릴리즈와 db에 저장된 릴리즈를 비교하여 같으면 skipped를 반환.
+ * 다르면 db의 technology, external_id를 기준으로 릴리즈를 업데이트하고 updated를 반환.
+ * @param transaction - 데이터베이스 트랜잭션
+ * @param release - 수집된 Release 정보
+ * @returns 저장 결과
+ */
 async function saveRelease(
   transaction: Transaction<IDatabase>,
   release: ICollectedRelease,
@@ -70,6 +79,11 @@ async function saveRelease(
   return "updated";
 }
 
+/**
+ * default_technologies 테이블의 enabled가 1인 기술을 조회한 뒤, 
+ * 각 기술별 inserted, updated, skipped 여부를 숫자로 반환
+ * @returns 
+ */
 async function executeCollection(): Promise<ICollectionResult> {
   const database = getDatabase();
   const technologyRows = await database
@@ -94,6 +108,7 @@ async function executeCollection(): Promise<ICollectionResult> {
     releases.push(await fetchLatestStableRelease(target));
   }
 
+  // 여기서 saveRelease를 호출하여 릴리즈 저장, 스킵, 변경 여부를 판단하고 결과를 반환
   const items = await database.transaction().execute(async (transaction) => {
     const results: ICollectionItemResult[] = [];
 
@@ -119,6 +134,10 @@ async function executeCollection(): Promise<ICollectionResult> {
 
 let activeCollection: Promise<ICollectionResult> | null = null;
 
+/**
+ * executeCollection를 호출하여 결과값을 반환함.
+ * @returns 
+ */
 export function collectLatestReleases(): Promise<ICollectionResult> {
   if (!activeCollection) {
     activeCollection = executeCollection().finally(() => {

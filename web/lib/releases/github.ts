@@ -1,6 +1,9 @@
 import { z } from "zod";
 import type { ICollectedRelease } from "./types";
 
+/**
+ * github Release API 응답 형식
+ */
 const githubReleaseSchema = z.object({
   id: z.number().int().nonnegative(),
   tag_name: z.string().min(1),
@@ -12,6 +15,9 @@ const githubReleaseSchema = z.object({
   html_url: z.string().url(),
 });
 
+/**
+ * github Release API 응답 형식을 배열로 감싸서 검증
+ */
 const githubReleaseListSchema = z.array(githubReleaseSchema);
 
 type GitHubRelease = z.infer<typeof githubReleaseSchema>;
@@ -22,6 +28,10 @@ export interface IGitHubTarget {
   releasesPath: string;
 }
 
+/**
+ * Github release 조회 중 발생한 오류를 나타내는 커스텀 에러 클래스
+ * Error을 상속받아서 name, message, stack을 포함함
+ */
 export class GitHubReleaseError extends Error {
   readonly technology: string;
   readonly publicMessage: string;
@@ -37,10 +47,21 @@ export class GitHubReleaseError extends Error {
   }
 }
 
+/**
+ * github Release API 응답 형식 검사
+ * 내부적으로 사용할 함수라서 safeParse 대신 parse 사용
+ * @param value 
+ * @returns 값이 올바르면 value 그대로 반환. 값이 올바르지 않으면 zod 에러를 반환
+ */
 export function parseGitHubReleases(value: unknown): GitHubRelease[] {
   return githubReleaseListSchema.parse(value);
 }
 
+/**
+ * 최신 release만을 반환. 
+ * @param releases 
+ * @returns 
+ */
 export function selectLatestStableRelease(
   releases: GitHubRelease[],
 ): GitHubRelease | null {
@@ -60,6 +81,11 @@ export function selectLatestStableRelease(
   );
 }
 
+/**
+ * mariaDB DATETIME 형식으로 변환
+ * @param isoDate 
+ * @returns 
+ */
 export function toMariaDbDateTime(isoDate: string): string {
   const date = new Date(isoDate);
 
@@ -70,10 +96,21 @@ export function toMariaDbDateTime(isoDate: string): string {
   return date.toISOString().slice(0, 23).replace("T", " ");
 }
 
+/**
+ * api 호출 시 사용하는 URL을 합치기 위함.
+ * @param baseUrl 
+ * @param path 
+ * @returns 
+ */
 function joinUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
 }
 
+/**
+ * 지정된 github 타겟의 최신 release를 조회하여 반환.
+ * @param target 
+ * @returns 
+ */
 export async function fetchLatestStableRelease(
   target: IGitHubTarget,
 ): Promise<ICollectedRelease> {

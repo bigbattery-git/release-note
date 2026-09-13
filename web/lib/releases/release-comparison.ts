@@ -11,6 +11,12 @@ type ExistingRelease = Pick<
   | "released_at"
 >;
 
+/**
+ * 이전 release와 새로 수집한 release를 비교하여 변경사항이 있는지 확인함
+ * @param existing 
+ * @param incoming 
+ * @returns 
+ */
 export function hasReleaseChanged(
   existing: ExistingRelease,
   incoming: ICollectedRelease,
