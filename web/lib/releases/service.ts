@@ -4,12 +4,7 @@ import {
   fetchLatestStableRelease,
   type IGitHubTarget,
 } from "./github.ts";
-import type {
-  CollectionStatus,
-  ICollectedRelease,
-  ICollectionItemResult,
-  ICollectionResult,
-} from "./types";
+import type { ICollectedRelease, ICollectionResult } from "./types";
 import {
   hasReleaseChanged,
   hasReleaseDescriptionChanged,
@@ -18,7 +13,6 @@ import { summarizeReleaseDescription } from "./summary.ts";
 
 export interface ISavedRelease {
   description: string | null;
-  status: CollectionStatus;
   summary: string | null;
 }
 
@@ -50,9 +44,7 @@ const summaryDependencies: ISummaryDependencies = {
 
 /**
  * 최신 릴리즈 저장을 시도한다.
- * 릴리즈가 없으면, 최신 릴리즈를 저장하고 종료
- * 릴리즈가 있으면, api로 받아온 릴리즈와 db에 저장된 릴리즈를 비교하여 같으면 skipped를 반환.
- * 다르면 db의 technology, external_id를 기준으로 릴리즈를 업데이트하고 updated를 반환.
+ * 같은 external_id가 없으면 새 행을 저장하고, 있으면 변경된 내용만 갱신한다.
  * @param transaction - 데이터베이스 트랜잭션
  * @param release - 수집된 Release 정보
  * @returns 저장 결과
@@ -93,7 +85,6 @@ async function saveRelease(
 
     return {
       description: release.description,
-      status: "inserted",
       summary: null,
     };
   }
@@ -101,7 +92,6 @@ async function saveRelease(
   if (!hasReleaseChanged(existing, release)) {
     return {
       description: existing.description,
-      status: "skipped",
       summary: existing.summary,
     };
   }
@@ -129,67 +119,35 @@ async function saveRelease(
 
   return {
     description: release.description,
-    status: "updated",
     summary: descriptionChanged ? null : existing.summary,
   };
 }
 
-export async function createSummaryResult(
+export async function createSummaryWarning(
   release: ICollectedRelease,
   saved: ISavedRelease,
   dependencies: ISummaryDependencies = summaryDependencies,
-): Promise<ICollectionItemResult> {
+): Promise<string | null> {
   if (saved.summary) {
-    return {
-      technology: release.technology,
-      label: release.label,
-      version: release.version,
-      status: saved.status,
-      summary: saved.summary,
-      summaryStatus: "preserved",
-    };
+    return null;
   }
 
   if (!saved.description?.trim()) {
-    return {
-      technology: release.technology,
-      label: release.label,
-      version: release.version,
-      status: saved.status,
-      summary: null,
-      summaryStatus: "not_applicable",
-    };
+    return null;
   }
 
   try {
     const summary = await dependencies.summarize(saved.description);
     await dependencies.persistSummary(release, summary);
 
-    return {
-      technology: release.technology,
-      label: release.label,
-      version: release.version,
-      status: saved.status,
-      summary,
-      summaryStatus: "generated",
-    };
+    return null;
   } catch {
-    return {
-      technology: release.technology,
-      label: release.label,
-      version: release.version,
-      status: saved.status,
-      summary: null,
-      summaryStatus: "failed",
-      summaryError: `${release.label} Release 요약 생성에 실패했습니다.`,
-    };
+    return `${release.label} Release 요약 생성에 실패했습니다.`;
   }
 }
 
 /**
- * default_technologies 테이블의 enabled가 1인 기술을 조회한 뒤, 
- * 각 기술별 inserted, updated, skipped 여부를 숫자로 반환
- * @returns 
+ * 활성 technology의 최신 Release를 저장하고 요약 실패 경고만 반환한다.
  */
 async function executeCollection(): Promise<ICollectionResult> {
   const database = getDatabase();
@@ -215,7 +173,6 @@ async function executeCollection(): Promise<ICollectionResult> {
     releases.push(await fetchLatestStableRelease(target));
   }
 
-  // 여기서 saveRelease를 호출하여 릴리즈 저장, 스킵, 변경 여부를 판단하고 결과를 반환
   const savedReleases = await database.transaction().execute(async (transaction) => {
     const results: Array<{
       release: ICollectedRelease;
@@ -232,18 +189,18 @@ async function executeCollection(): Promise<ICollectionResult> {
     return results;
   });
 
-  const items: ICollectionItemResult[] = [];
+  const warnings: string[] = [];
 
   for (const { release, saved } of savedReleases) {
-    items.push(await createSummaryResult(release, saved));
+    const warning = await createSummaryWarning(release, saved);
+
+    if (warning) {
+      warnings.push(warning);
+    }
   }
 
   return {
-    items,
-    inserted: items.filter((item) => item.status === "inserted").length,
-    updated: items.filter((item) => item.status === "updated").length,
-    skipped: items.filter((item) => item.status === "skipped").length,
-    summaryFailed: items.filter((item) => item.summaryStatus === "failed").length,
+    warnings,
   };
 }
 

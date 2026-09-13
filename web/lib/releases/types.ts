@@ -10,29 +10,8 @@ export interface ICollectedRelease {
   releasedAt: string;
 }
 
-export type CollectionStatus = "inserted" | "updated" | "skipped";
-export type SummaryStatus =
-  | "generated"
-  | "preserved"
-  | "not_applicable"
-  | "failed";
-
-export interface ICollectionItemResult {
-  technology: string;
-  label: string;
-  version: string;
-  status: CollectionStatus;
-  summary: string | null;
-  summaryStatus: SummaryStatus;
-  summaryError?: string;
-}
-
 export interface ICollectionResult {
-  items: ICollectionItemResult[];
-  inserted: number;
-  updated: number;
-  skipped: number;
-  summaryFailed: number;
+  warnings: string[];
 }
 
 export interface ICollectionErrorResponse {

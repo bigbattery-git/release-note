@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  createSummaryResult,
+  createSummaryWarning,
   type ISavedRelease,
   type ISummaryDependencies,
 } from "./service.ts";
@@ -33,10 +33,9 @@ test("기존 summary가 있으면 OpenAI를 호출하지 않고 보존한다", a
   let summarizeCalled = false;
   const saved: ISavedRelease = {
     description: release.description,
-    status: "skipped",
     summary: "- 기존 요약",
   };
-  const result = await createSummaryResult(
+  const warning = await createSummaryWarning(
     release,
     saved,
     createDependencies({
@@ -48,26 +47,24 @@ test("기존 summary가 있으면 OpenAI를 호출하지 않고 보존한다", a
   );
 
   assert.equal(summarizeCalled, false);
-  assert.equal(result.summaryStatus, "preserved");
-  assert.equal(result.summary, "- 기존 요약");
+  assert.equal(warning, null);
 });
 
 test("description이 없으면 요약 대상이 아니라고 반환한다", async () => {
-  const result = await createSummaryResult(
+  const warning = await createSummaryWarning(
     { ...release, description: null },
-    { description: null, status: "inserted", summary: null },
+    { description: null, summary: null },
     createDependencies(),
   );
 
-  assert.equal(result.summaryStatus, "not_applicable");
-  assert.equal(result.summary, null);
+  assert.equal(warning, null);
 });
 
-test("요약 성공 결과를 저장하고 generated 상태를 반환한다", async () => {
+test("요약 성공 결과를 저장하고 경고를 반환하지 않는다", async () => {
   let persistedSummary: string | null = null;
-  const result = await createSummaryResult(
+  const warning = await createSummaryWarning(
     release,
-    { description: release.description, status: "skipped", summary: null },
+    { description: release.description, summary: null },
     createDependencies({
       persistSummary: async (_release, summary) => {
         persistedSummary = summary;
@@ -76,14 +73,13 @@ test("요약 성공 결과를 저장하고 generated 상태를 반환한다", as
   );
 
   assert.equal(persistedSummary, "- 핵심 변경");
-  assert.equal(result.summaryStatus, "generated");
-  assert.equal(result.summary, "- 핵심 변경");
+  assert.equal(warning, null);
 });
 
-test("요약 실패를 Release 저장 성공과 분리한 failed 상태로 반환한다", async () => {
-  const result = await createSummaryResult(
+test("요약 실패를 Release 저장 성공과 분리한 안전한 경고로 반환한다", async () => {
+  const warning = await createSummaryWarning(
     release,
-    { description: release.description, status: "updated", summary: null },
+    { description: release.description, summary: null },
     createDependencies({
       summarize: async () => {
         throw new Error("secret internal error");
@@ -91,9 +87,6 @@ test("요약 실패를 Release 저장 성공과 분리한 failed 상태로 반�
     }),
   );
 
-  assert.equal(result.status, "updated");
-  assert.equal(result.summaryStatus, "failed");
-  assert.equal(result.summary, null);
-  assert.match(result.summaryError ?? "", /React/);
-  assert.doesNotMatch(result.summaryError ?? "", /secret|internal/);
+  assert.match(warning ?? "", /React/);
+  assert.doesNotMatch(warning ?? "", /secret|internal/);
 });
