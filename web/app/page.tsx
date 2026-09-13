@@ -53,9 +53,7 @@ export default async function Home() {
                     <time dateTime={technology.release.createdAt}>
                       저장 {technology.release.createdAt.slice(0, 10)}
                     </time>
-                    <span>
-                      {technology.release.hasSummary ? "요약 있음" : "요약 없음"}
-                    </span>
+                    <span>{technology.release.hasSummary || "요약 없음"}</span>
                   </div>
                 </Link>
               ) : (
