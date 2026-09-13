@@ -32,7 +32,10 @@ export default async function TechnologyPage({
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-14">
       <div className="mx-auto w-full max-w-3xl">
-        <Link href="/" className="text-sm font-semibold text-blue-700 hover:text-blue-900">
+        <Link
+          href="/"
+          className="text-sm font-semibold text-blue-700 hover:text-blue-900"
+        >
           ← 최신 Release로 돌아가기
         </Link>
 
@@ -58,13 +61,15 @@ export default async function TechnologyPage({
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="font-bold text-slate-950">{release.version}</p>
+                      <p className="font-bold text-slate-950">
+                        {release.version}
+                      </p>
                       <h2 className="mt-1 text-sm leading-6 text-slate-700">
                         {release.title}
                       </h2>
                     </div>
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                      {release.hasSummary ? "요약 있음" : "요약 없음"}
+                      {release.hasSummary || "요약 없음"}
                     </span>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
@@ -85,7 +90,10 @@ export default async function TechnologyPage({
           </p>
         )}
 
-        <nav aria-label="Release 목록 페이지" className="mt-8 flex items-center justify-between">
+        <nav
+          aria-label="Release 목록 페이지"
+          className="mt-8 flex items-center justify-between"
+        >
           {releasePage.page > 1 ? (
             <Link
               href={`/technologies/${encodeURIComponent(releasePage.technology)}?page=${releasePage.page - 1}`}
@@ -96,7 +104,9 @@ export default async function TechnologyPage({
           ) : (
             <span />
           )}
-          <span className="text-sm text-slate-500">{releasePage.page} page</span>
+          <span className="text-sm text-slate-500">
+            {releasePage.page} page
+          </span>
           {releasePage.hasNext ? (
             <Link
               href={`/technologies/${encodeURIComponent(releasePage.technology)}?page=${releasePage.page + 1}`}
