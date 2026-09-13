@@ -6,6 +6,9 @@ services:
   web:
     build: ./web
     init: true
+    env_file:
+      - path: ./web/.env
+        required: false
     command: ["npm", "run", "start:docker"]
     volumes:
       - ./web/app:/app/app

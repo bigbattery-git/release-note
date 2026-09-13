@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { hasReleaseChanged } from "./release-comparison.ts";
+import {
+  hasReleaseChanged,
+  hasReleaseDescriptionChanged,
+} from "./release-comparison.ts";
 import {
   fetchLatestStableRelease,
   GitHubReleaseError,
@@ -84,6 +87,14 @@ test("동일한 Release와 수정된 Release를 구분한다", () => {
   assert.equal(hasReleaseChanged(existing, incoming), false);
   assert.equal(
     hasReleaseChanged({ ...existing, description: "changed" }, incoming),
+    true,
+  );
+  assert.equal(
+    hasReleaseDescriptionChanged(existing.description, incoming.description),
+    false,
+  );
+  assert.equal(
+    hasReleaseDescriptionChanged("changed", incoming.description),
     true,
   );
 });

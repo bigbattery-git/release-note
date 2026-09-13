@@ -30,3 +30,11 @@ export function hasReleaseChanged(
     existing.released_at !== incoming.releasedAt
   );
 }
+
+/** Release 원문이 바뀌어 기존 요약을 무효화해야 하는지 판정한다. */
+export function hasReleaseDescriptionChanged(
+  existingDescription: string | null,
+  incomingDescription: string | null,
+): boolean {
+  return existingDescription !== incomingDescription;
+}

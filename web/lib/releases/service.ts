@@ -10,7 +10,43 @@ import type {
   ICollectionItemResult,
   ICollectionResult,
 } from "./types";
-import { hasReleaseChanged } from "./release-comparison.ts";
+import {
+  hasReleaseChanged,
+  hasReleaseDescriptionChanged,
+} from "./release-comparison.ts";
+import { summarizeReleaseDescription } from "./summary.ts";
+
+export interface ISavedRelease {
+  description: string | null;
+  status: CollectionStatus;
+  summary: string | null;
+}
+
+export interface ISummaryDependencies {
+  persistSummary: (
+    release: ICollectedRelease,
+    summary: string,
+  ) => Promise<void>;
+  summarize: (description: string) => Promise<string>;
+}
+
+const summaryDependencies: ISummaryDependencies = {
+  async persistSummary(release, summary) {
+    const database = getDatabase();
+
+    await database
+      .updateTable("technology_releases")
+      .set({
+        summary,
+        updated_at: sql<string>`CURRENT_TIMESTAMP(3)`,
+      })
+      .where("technology", "=", release.technology)
+      .where("external_id", "=", release.externalId)
+      .where("summary", "is", null)
+      .executeTakeFirstOrThrow();
+  },
+  summarize: summarizeReleaseDescription,
+};
 
 /**
  * 최신 릴리즈 저장을 시도한다.
@@ -24,13 +60,14 @@ import { hasReleaseChanged } from "./release-comparison.ts";
 async function saveRelease(
   transaction: Transaction<IDatabase>,
   release: ICollectedRelease,
-): Promise<CollectionStatus> {
+): Promise<ISavedRelease> {
   const existing = await transaction
     .selectFrom("technology_releases")
     .select([
       "version",
       "title",
       "description",
+      "summary",
       "source_url",
       "changelog_url",
       "released_at",
@@ -54,12 +91,25 @@ async function saveRelease(
       })
       .executeTakeFirstOrThrow();
 
-    return "inserted";
+    return {
+      description: release.description,
+      status: "inserted",
+      summary: null,
+    };
   }
 
   if (!hasReleaseChanged(existing, release)) {
-    return "skipped";
+    return {
+      description: existing.description,
+      status: "skipped",
+      summary: existing.summary,
+    };
   }
+
+  const descriptionChanged = hasReleaseDescriptionChanged(
+    existing.description,
+    release.description,
+  );
 
   await transaction
     .updateTable("technology_releases")
@@ -67,6 +117,7 @@ async function saveRelease(
       version: release.version,
       title: release.title,
       description: release.description,
+      summary: descriptionChanged ? null : existing.summary,
       source_url: release.sourceUrl,
       changelog_url: release.changelogUrl,
       released_at: release.releasedAt,
@@ -76,7 +127,63 @@ async function saveRelease(
     .where("external_id", "=", release.externalId)
     .executeTakeFirstOrThrow();
 
-  return "updated";
+  return {
+    description: release.description,
+    status: "updated",
+    summary: descriptionChanged ? null : existing.summary,
+  };
+}
+
+export async function createSummaryResult(
+  release: ICollectedRelease,
+  saved: ISavedRelease,
+  dependencies: ISummaryDependencies = summaryDependencies,
+): Promise<ICollectionItemResult> {
+  if (saved.summary) {
+    return {
+      technology: release.technology,
+      label: release.label,
+      version: release.version,
+      status: saved.status,
+      summary: saved.summary,
+      summaryStatus: "preserved",
+    };
+  }
+
+  if (!saved.description?.trim()) {
+    return {
+      technology: release.technology,
+      label: release.label,
+      version: release.version,
+      status: saved.status,
+      summary: null,
+      summaryStatus: "not_applicable",
+    };
+  }
+
+  try {
+    const summary = await dependencies.summarize(saved.description);
+    await dependencies.persistSummary(release, summary);
+
+    return {
+      technology: release.technology,
+      label: release.label,
+      version: release.version,
+      status: saved.status,
+      summary,
+      summaryStatus: "generated",
+    };
+  } catch {
+    return {
+      technology: release.technology,
+      label: release.label,
+      version: release.version,
+      status: saved.status,
+      summary: null,
+      summaryStatus: "failed",
+      summaryError: `${release.label} Release 요약 생성에 실패했습니다.`,
+    };
+  }
 }
 
 /**
@@ -109,26 +216,34 @@ async function executeCollection(): Promise<ICollectionResult> {
   }
 
   // 여기서 saveRelease를 호출하여 릴리즈 저장, 스킵, 변경 여부를 판단하고 결과를 반환
-  const items = await database.transaction().execute(async (transaction) => {
-    const results: ICollectionItemResult[] = [];
+  const savedReleases = await database.transaction().execute(async (transaction) => {
+    const results: Array<{
+      release: ICollectedRelease;
+      saved: ISavedRelease;
+    }> = [];
 
     for (const release of releases) {
       results.push({
-        technology: release.technology,
-        label: release.label,
-        version: release.version,
-        status: await saveRelease(transaction, release),
+        release,
+        saved: await saveRelease(transaction, release),
       });
     }
 
     return results;
   });
 
+  const items: ICollectionItemResult[] = [];
+
+  for (const { release, saved } of savedReleases) {
+    items.push(await createSummaryResult(release, saved));
+  }
+
   return {
     items,
     inserted: items.filter((item) => item.status === "inserted").length,
     updated: items.filter((item) => item.status === "updated").length,
     skipped: items.filter((item) => item.status === "skipped").length,
+    summaryFailed: items.filter((item) => item.summaryStatus === "failed").length,
   };
 }
 

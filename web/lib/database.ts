@@ -8,6 +8,7 @@ export interface ITechnologyReleaseTable {
   version: string;
   title: string;
   description: string | null;
+  summary: string | null;
   source_url: string | null;
   changelog_url: string | null;
   released_at: string;
